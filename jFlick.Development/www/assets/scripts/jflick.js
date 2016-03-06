@@ -128,18 +128,19 @@ jFlick.PopView = function () {
         }
     } else if (jFlick.__performance == 'bump') {
         current.find('.navigator').css('position', 'static');
-        current.css('padding-top', $('.navigator[data-parent="#' + current.attr('id') + '"]').outerHeight());
+        $('.navigator[data-parent="#' + current.attr('id') + '"]').appendTo($('.navigator[data-parent="#' + current.attr('id') + '"]').attr('data-parent'));
+        current.css('padding-top', 0);
         current.outerHeight($(window).height());
         current.css('transform', 'translateY(' + $(window).height() + 'px)');
     } else {
         current.remove();
+        $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
     }
 
-    if (jFlick.__performance == 'bump' || jFlick.__performance == 'slide')
-        setTimeout(function () {
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
-            current.remove();
-        }, 250);
+    setTimeout(function () {
+        $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
+        current.remove();
+    }, 250);
 
     return true;
 }
@@ -251,9 +252,14 @@ jFlick.RedirectTo = function (url, performance) {
             }, 50);
 
             setTimeout(function () {
-                // 调整新视图位置
+                // 移动Navigators
                 container.find('.navigator').css('position', 'fixed');
-                container.css('padding-top', container.find('.navigator').outerHeight());
+                container.css('z-index', 'auto');
+                container.find('.navigator').attr('data-parent', '#' + container.attr('id'));
+                container.find('.navigator').appendTo('#jflick-navigators');
+
+                // 调整新视图位置
+                container.css('padding-top', $('.navigator[data-parent="#' + container.attr('id') + '"]').find('.navigator').outerHeight());
                 container.outerHeight($(window).height());
             }, 300);
         } else {
