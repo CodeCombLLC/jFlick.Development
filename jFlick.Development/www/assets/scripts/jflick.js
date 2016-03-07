@@ -4,7 +4,7 @@ var jFlick = {};
 jFlick.__performance = null;
 jFlick.ViewStack = [];
 jFlick.Middlewares = [];
-jFlick.__blur = {};
+jFlick.__currentBlurTimer = null
 
 /* Routing */
 var router = {};
@@ -128,6 +128,8 @@ jFlick.PopView = function () {
             $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.right').css('opacity', 1);
         }
     } else if (jFlick.__performance == 'bump') {
+        $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.container-blurred').remove();
+        $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.container-blurred-bg').remove();
         current.find('.navigator').css('position', 'static');
         $('.navigator[data-parent="#' + current.attr('id') + '"]').appendTo($('.navigator[data-parent="#' + current.attr('id') + '"]').attr('data-parent'));
         current.css('padding-top', 0);
@@ -135,22 +137,23 @@ jFlick.PopView = function () {
         current.css('transform', 'translateY(' + $(window).height() + 'px)');
     } else {
         $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
-        if (jFlick.__blur[current.attr('id')])
-        {
-            clearInterval(jFlick.__blur[current.attr('id')]);
-            jFlick.__blur[current.attr('id')] = null;
-        }
+        if (jFlick.__currentBlurTimer)
+            clearInterval(jFlick.__currentBlurTimer);
         current.remove();
+        jFlick.__currentBlurTimer = setInterval(function () {
+            $('.navigator[data-parent="#' + covered.attr('id') + '"] .container-blurred').scrollTop(covered.scrollTop(), true);
+        }, 10);
     }
 
     setTimeout(function () {
         $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
-        if (jFlick.__blur[current.attr('id')]) {
-            clearInterval(jFlick.__blur[current.attr('id')]);
-            jFlick.__blur[current.attr('id')] = null;
-        }
+        if (jFlick.__currentBlurTimer)
+            clearInterval(jFlick.__currentBlurTimer);
         current.remove();
-    }, 250);
+        jFlick.__currentBlurTimer = setInterval(function () {
+            $('.navigator[data-parent="#' + covered.attr('id') + '"] .container-blurred').scrollTop(covered.scrollTop(), true);
+        }, 10);
+    }, 300);
 
     return true;
 }
@@ -164,6 +167,7 @@ jFlick.Middlewares.push(function (req, res, next) {
 jFlick.Middlewares.push(function (req, res, next) {
     // 注册标题栏毛玻璃特效
     var bg = $('<div class="container-blurred-bg"></div>');
+    var header = res.find('.navigator');
     res.find('.navigator').append(bg);
     var duplicate = res.clone();
     duplicate.find('.navigator').remove();
@@ -172,15 +176,19 @@ jFlick.Middlewares.push(function (req, res, next) {
     duplicate.css('position', 'fixed');
     duplicate.addClass('container-blurred');
     duplicate.removeClass('container');
-
-    var header = res.find('.navigator');
+    header.append(duplicate);
+    res.find('.navigator').append(bg);
 
     var translation;
-    jFlick.__blur[res.attr('id')] = setInterval(function () {
+    if (jFlick.__currentBlurTimer)
+        clearInterval(jFlick.__currentBlurTimer);
+
+    jFlick.__currentBlurTimer = setInterval(function () {
         duplicate.scrollTop(res.scrollTop(), true);
         duplicate.outerHeight(header.outerHeight());
-        bg.outerHeight(header.outerHeight());
-    }, 1);
+        bg.outerHeight(header.outerHeight() + parseFloat(bg.css('border-bottom-width').replace('px', '')));
+    }, 10);
+
     next();
 });
 
