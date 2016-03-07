@@ -4,6 +4,7 @@ var jFlick = {};
 jFlick.__performance = null;
 jFlick.ViewStack = [];
 jFlick.Middlewares = [];
+jFlick.__blur = {};
 
 /* Routing */
 var router = {};
@@ -133,12 +134,21 @@ jFlick.PopView = function () {
         current.outerHeight($(window).height());
         current.css('transform', 'translateY(' + $(window).height() + 'px)');
     } else {
-        current.remove();
         $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
+        if (jFlick.__blur[current.attr('id')])
+        {
+            clearInterval(jFlick.__blur[current.attr('id')]);
+            jFlick.__blur[current.attr('id')] = null;
+        }
+        current.remove();
     }
 
     setTimeout(function () {
         $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
+        if (jFlick.__blur[current.attr('id')]) {
+            clearInterval(jFlick.__blur[current.attr('id')]);
+            jFlick.__blur[current.attr('id')] = null;
+        }
         current.remove();
     }, 250);
 
@@ -148,6 +158,29 @@ jFlick.PopView = function () {
 jFlick.Middlewares.push(function (req, res, next) {
     // 注册Switchery
     jFlick.RegisterSwitchery(res);
+    next();
+});
+
+jFlick.Middlewares.push(function (req, res, next) {
+    // 注册标题栏毛玻璃特效
+    var bg = $('<div class="container-blurred-bg"></div>');
+    res.find('.navigator').append(bg);
+    var duplicate = res.clone();
+    duplicate.find('.navigator').remove();
+    duplicate.removeAttr('id');
+    duplicate.removeAttr('data-url');
+    duplicate.css('position', 'fixed');
+    duplicate.addClass('container-blurred');
+    duplicate.removeClass('container');
+
+    var header = res.find('.navigator');
+
+    var translation;
+    jFlick.__blur[res.attr('id')] = setInterval(function () {
+        duplicate.scrollTop(res.scrollTop(), true);
+        duplicate.outerHeight(header.outerHeight());
+        bg.outerHeight(header.outerHeight());
+    }, 1);
     next();
 });
 
@@ -175,7 +208,6 @@ jFlick.RedirectTo = function (url, performance) {
         var mid = jFlick.BuildMiddlewaresChain(0, jFlick.AnalyzingParams(), container);
         if (mid)
             mid();
-
         if (performance == 'slide') {
             if (container.find('.navigator').length == 0 && $('.navigator[data-parent="#' + container.attr('id') + '"]').length == 0 || covered.find('.navigator').length == 0 && $('.navigator[data-parent="#' + covered.attr('id') + '"]').length == 0) {
                 covered.css('transform', 'translateX(' + -$(window).width() / 4 + 'px)');
@@ -186,10 +218,6 @@ jFlick.RedirectTo = function (url, performance) {
                 }, 50);
             } else {
                 container.addClass('swipable');
-
-                // 移动Navigators
-                covered.find('.navigator').attr('data-parent', '#' + covered.attr('id'));
-                covered.find('.navigator').appendTo('#jflick-navigators');
 
                 // 添加container顶部空隙
                 covered.css('padding-top', $('.navigator[data-parent="#' + covered.attr('id') + '"]').outerHeight());
@@ -263,7 +291,10 @@ jFlick.RedirectTo = function (url, performance) {
                 container.outerHeight($(window).height());
             }, 300);
         } else {
+            container.find('.navigator').attr('data-parent', '#' + container.attr('id'));
+            container.outerHeight($(window).height());
             container.appendTo('body');
+            container.find('.navigator').appendTo('#jflick-navigators');
             covered.hide();
             var func = jFlick.BuildCallChain(jFlick.GetPath(document.location.toString()), 0, jFlick.AnalyzingParams(), container);
             func();
@@ -278,6 +309,8 @@ jFlick.RedirectTo = function (url, performance) {
                 if (func)
                     func();
             }, 300);
+        else
+            container.outerHeight($(window).height());
         frm.parentNode.removeChild(frm);
     };
     document.body.appendChild(frm);
@@ -306,7 +339,7 @@ jFlick.GetPath = function (url) {
 };
 
 $(document).ready(function () {
-    $(document).unbind('touchstart').bind('touchstart', function (e) {
+    $(document).bind('touchstart', function (e) {
         var tr;
         if ($(e.target).is('tr') && $(e.target).attr('href')) {
             tr = $(e.target);
@@ -327,7 +360,7 @@ $(document).ready(function () {
             fix.appendTo(tr.parents('.container'));
         }
     });
-    $(document).unbind('touchmove').bind('touchmove', function (e) {
+    $(document).bind('touchmove', function (e) {
         var tr;
         if ($(e.target).is('tr') && $(e.target).attr('href')) {
             tr = $(e.target);
@@ -349,7 +382,7 @@ $(document).ready(function () {
             jFlick.__currentTr = null;
         }
     });
-    $(document).unbind('touchend').bind('touchend', function (e) {
+    $(document).bind('touchend', function (e) {
         if (!jFlick.__currentTr)
             return;
         var tr;
