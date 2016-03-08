@@ -3,16 +3,136 @@
 var jFlick = {};
 jFlick.__performance = null;
 jFlick.ViewStack = [];
-jFlick.Middlewares = [];
-jFlick.__currentBlurTimer = null
+jFlick.__currentBlurTimer = null;
 
 /* Routing */
 var router = {};
-router.routingList = {};
-router.get = function (path, func) {
-    if (!router.routingList[path])
-        router.routingList[path] = [];
-    router.routingList[path].push(func);
+router.global = {};
+router.global.onloading = [];
+router.global.onloaded = [];
+router.global.onpopping = [];
+router.global.onpopped = [];
+router.global.onredirecting = [];
+router.onloaded = {};
+router.onpopping = {};
+router.onloading = {};
+router.onpopped = {};
+
+router.loaded = router.get = function (path, func) {
+    if (!path || !func) return;
+    if (!router.onloaded[path])
+        router.onloaded[path] = [];
+    router.onloaded[path].push(func);
+};
+
+router.loading = function (path, func) {
+    if (!path || !func) return;
+    if (!router.onloading[path])
+        router.onloading[path] = [];
+    router.onloading[path].push(func);
+};
+
+router.popping = function (path, func) {
+    if (!path || !func) return;
+    if (!router.onpopping[path])
+        router.onpopping[path] = [];
+    router.onpopping[path].push(func);
+};
+
+router.popped = function (path, func) {
+    if (!path || !func) return;
+    if (!router.onpopped[path])
+        router.onpopped[path] = [];
+    router.onpopped[path].push(func);
+};
+
+router.global.loading = router.use = function (func) {
+    if (!func) return;
+    router.global.onloading.push(func);
+};
+
+router.global.loaded = router.use = function (func) {
+    if (!func) return;
+    router.global.onloaded.push(func);
+};
+
+router.global.popping = router.use = function (func) {
+    if (!func) return;
+    router.global.onpopping.push(func);
+};
+
+router.global.popped = router.use = function (func) {
+    if (!func) return;
+    router.global.onpopped.push(func);
+};
+
+router.global.redirecting = function (func) {
+    if (!func) return;
+    router.global.onredirecting.push(func);
+};
+
+jFlick.OnLoading = function (i, req, res) {
+    if (!router.global.onloading[i])
+        return jFlick.__OnLoading(0, req, res);
+    return function () {
+        router.global.onloading[i](req, res, jFlick.OnLoading(i + 1, req, res));
+    };
+};
+
+jFlick.__OnLoading = function (i, req, res) {
+    if (!router.onloading[key] || !router.onloading[key][i])
+        return function () { };
+    return function () {
+        router.onloading[key][i](req, res, jFlick.__OnLoading(key, i + 1, req, res));
+    };
+};
+
+jFlick.OnLoaded = function (key, i, req, res) {
+    if (!router.global.onloaded[i])
+        return jFlick.__OnLoaded(0, req, res);
+    return function () {
+        router.onloaded[key][i](req, res, jFlick.OnLoaded(key, i + 1, req, res));
+    };
+};
+
+jFlick.__OnLoaded = function (i, req, res) {
+    if (!router.onloaded[key] || !router.onloaded[key][i])
+        return function () { };
+    return function () {
+        router.onloaded[key][i](req, res, jFlick.__OnLoaded(key, i + 1, req, res));
+    };
+};
+
+jFlick.OnPopping = function (i, req, top, bottom, final) {
+    if (!router.global.onpopping[i])
+        return jFlick.__OnPopping(0, req, top, bottom);
+    return function () {
+        router.global.onpopping[i](req, top, bottom, jFlick.OnPopping(i + 1, req, res), final);
+    };
+};
+
+jFlick.__OnPopping = function (i, req, top, bottom) {
+    if (!router.onpopping[key] || !router.onpopping[key][i])
+        return function () { };
+    return function () {
+        router.onpopping[key][i](req, top, bottom, jFlick.__OnPopping(key, i + 1, req, res));
+    };
+};
+
+jFlick.OnPopped = function (key, i, req, res) {
+    if (!router.global.onpopped[i])
+        return jFlick.__OnPopped(0, req, res);
+    return function () {
+        router.onloaded[key][i](req, res, jFlick.OnPopped(key, i + 1, req, res));
+    };
+};
+
+jFlick.__OnPopped = function (i, req, res) {
+    if (!router.onpopped[key] || !router.onpopped[key][i])
+        return function () { };
+    return function () {
+        router.onpopped[key][i](req, res, jFlick.__OnPopped(key, i + 1, req, res));
+    };
 };
 
 /* Parameters analyzing */
@@ -47,10 +167,6 @@ jFlick.AnalyzingPostParams = function () {
 /* Startup */
 jFlick.Startup = function () {
     $('body').append('<div id="jflick-navigators"></div>');
-    touch.on('body', 'swiperight', function (e) {
-        if ($(e.target).hasClass('swipable') || $(e.target).parents('.swipable').length > 0)
-            jFlick.Back();
-    });
 
     var tmp = document.location.toString();
     jFlick.webRootPath = tmp.substr(0, tmp.indexOf('/index.html'));
@@ -94,77 +210,19 @@ jFlick.PopView = function () {
     if ($('.container').length <= 1) return false;
     var current = $($('.container')[$('.container').length - 1]);
     var covered = $($('.container')[$('.container').length - 2]);
-    covered.css('display', 'inline');
-    if (jFlick.__performance == 'slide') {
-        if (current.find('.navigator').length == 0 && $('.navigator[data-parent="#' + current.attr('id') + '"]').length == 0 || covered.find('.navigator').length == 0 && $('.navigator[data-parent="#' + covered.attr('id') + '"]').length == 0) {
-            current.css('transform', 'translateX(' + $(window).width() + 'px)');
-            covered.css('transform', 'none');
-        } else {
-            covered.css('padding-top', $('.navigator[data-parent="#' + covered.attr('id') + '"]').outerHeight());
-            covered.outerHeight($(window).height());
-            current.css('padding-top', $('.navigator[data-parent="#' + current.attr('id') + '"]').outerHeight());
-            current.outerHeight($(window).height());
-            $('.navigator[data-parent="#' + covered.attr('id') + '"]').css('position', 'fixed');
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').css('position', 'fixed');
-
-            current.css('transform', 'translateX(' + $(window).width() + 'px)');
-            covered.css('transform', 'none');
-
-            // 导航栏动画
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').addClass('alpha');
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.title').css('transform', 'translateX(' + $(window).width() / 4 + 'px)');
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.title').css('opacity', 0);
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.left').css('transform', 'translateX(' + $(window).width() / 4 + 'px)');
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.left').css('opacity', 0);
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.right').css('transform', 'translateX(' + $(window).width() / 4 + 'px)');
-            $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.right').css('opacity', 0);
-
-            $('.navigator[data-parent="#' + covered.attr('id') + '"]').removeClass('alpha');
-            $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.title').css('transform', 'none');
-            $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.title').css('opacity', 1);
-            $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.left').css('transform', 'none');
-            $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.left').css('opacity', 1);
-            $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.right').css('transform', 'none');
-            $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.right').css('opacity', 1);
-        }
-    } else if (jFlick.__performance == 'bump') {
-        $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.container-blurred').remove();
-        $('.navigator[data-parent="#' + current.attr('id') + '"]').find('.container-blurred-bg').remove();
-        current.find('.navigator').css('position', 'static');
-        $('.navigator[data-parent="#' + current.attr('id') + '"]').appendTo($('.navigator[data-parent="#' + current.attr('id') + '"]').attr('data-parent'));
-        current.css('padding-top', 0);
-        current.outerHeight($(window).height());
-        current.css('transform', 'translateY(' + $(window).height() + 'px)');
-    } else {
-        $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
-        if (jFlick.__currentBlurTimer)
-            clearInterval(jFlick.__currentBlurTimer);
-        current.remove();
-        jFlick.__currentBlurTimer = setInterval(function () {
-            $('.navigator[data-parent="#' + covered.attr('id') + '"] .container-blurred').scrollTop(covered.scrollTop(), true);
-        }, 15);
-    }
-
-    setTimeout(function () {
-        $('.navigator[data-parent="#' + current.attr('id') + '"]').remove();
-        if (jFlick.__currentBlurTimer)
-            clearInterval(jFlick.__currentBlurTimer);
-        current.remove();
-        jFlick.__currentBlurTimer = setInterval(function () {
-            $('.navigator[data-parent="#' + covered.attr('id') + '"] .container-blurred').scrollTop(covered.scrollTop(), true);
-        }, 10);
-    }, 300);
-
+    var popping = jFlick.OnPopping(0, jFlick.AnalyzingParams(), covered);
+    if (popping)
+        popping();
     return true;
 }
 
-jFlick.Middlewares.push(function (req, res, next) {
+router.middlewares.push(function (req, res, next) {
     // 注册Switchery
     jFlick.RegisterSwitchery(res);
     next();
 });
 
-jFlick.Middlewares.push(function (req, res, next) {
+router.middlewares.push(function (req, res, next) {
     // 注册标题栏毛玻璃特效
     var bg = $('<div class="container-blurred-bg"></div>');
     var header = res.find('.navigator');
@@ -188,6 +246,7 @@ jFlick.Middlewares.push(function (req, res, next) {
         duplicate.scrollTop(res.scrollTop(), true);
         duplicate.outerHeight(header.outerHeight());
         bg.outerHeight(header.outerHeight() + parseFloat(bg.css('border-bottom-width').replace('px', '')));
+        $(res.outerHeight($(window).height()))
     }, 15);
 
     next();
@@ -209,9 +268,11 @@ jFlick.RedirectTo = function (url, performance) {
         var tmp = $(frm).contents().find('.container')[0];
         var container = $(tmp);
         container.attr('id', jFlick.GenerateRandomString());
-        container.outerHeight($(window).height());
         var covered = $($('.container')[$('.container').length - 1]);
         container.attr('data-url', url);
+
+
+        container.outerHeight($(window).height());
 
         // 运行中间件
         var mid = jFlick.BuildMiddlewaresChain(0, jFlick.AnalyzingParams(), container);
@@ -324,22 +385,6 @@ jFlick.RedirectTo = function (url, performance) {
     };
     document.body.appendChild(frm);
 }
-
-jFlick.BuildCallChain = function (key, i, req, res) {
-    if (!router.routingList[key] || !router.routingList[key][i])
-        return function () { };
-    return function () { 
-        router.routingList[key][i](req, res, jFlick.BuildCallChain(key, i + 1, req, res));
-    };
-};
-
-jFlick.BuildMiddlewaresChain = function (i, req, res) {
-    if (!jFlick.Middlewares[i])
-        return function () { };
-    return function () {
-        jFlick.Middlewares[i](req, res, jFlick.BuildMiddlewaresChain(i + 1, req, res));
-    };
-};
 
 jFlick.GetPath = function (url) {
     url = url.substring(url.indexOf('/views') + 6);
