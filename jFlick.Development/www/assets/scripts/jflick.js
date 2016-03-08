@@ -142,7 +142,7 @@ jFlick.PopView = function () {
         current.remove();
         jFlick.__currentBlurTimer = setInterval(function () {
             $('.navigator[data-parent="#' + covered.attr('id') + '"] .container-blurred').scrollTop(covered.scrollTop(), true);
-        }, 10);
+        }, 15);
     }
 
     setTimeout(function () {
@@ -170,6 +170,7 @@ jFlick.Middlewares.push(function (req, res, next) {
     var header = res.find('.navigator');
     res.find('.navigator').append(bg);
     var duplicate = res.clone();
+    duplicate.find('*').removeAttr('id');
     duplicate.find('.navigator').remove();
     duplicate.removeAttr('id');
     duplicate.removeAttr('data-url');
@@ -187,7 +188,7 @@ jFlick.Middlewares.push(function (req, res, next) {
         duplicate.scrollTop(res.scrollTop(), true);
         duplicate.outerHeight(header.outerHeight());
         bg.outerHeight(header.outerHeight() + parseFloat(bg.css('border-bottom-width').replace('px', '')));
-    }, 10);
+    }, 15);
 
     next();
 });
