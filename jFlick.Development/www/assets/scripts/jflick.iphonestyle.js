@@ -76,6 +76,7 @@
 });
 
 jFlick.__performance = 'no';
+jFlick.__currentBlurTimer = null;
 
 router.global.popping(function (req, top, bottom, next, final) {
     bottom.css('display', 'inline');
@@ -283,4 +284,3 @@ router.global.loading(function (req, top, bottom, next) {
 
     next();
 });
-

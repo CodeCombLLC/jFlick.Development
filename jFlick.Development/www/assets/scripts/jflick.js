@@ -3,7 +3,6 @@
 var jFlick = {};
 jFlick.__performance = null;
 jFlick.ViewStack = [];
-jFlick.__currentBlurTimer = null;
 
 /* Routing */
 var router = {};
