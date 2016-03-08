@@ -69,17 +69,13 @@
             container.outerHeight($(window).height());
         }
     });
-});
-
-jFlick.__performance = 'no';
-
-router.global.loading(function (req, top, bottom, next) {
-    touch.on(top, 'swiperight', function (e) {
+    touch.on('body', 'swiperight', function (e) {
         if ($(e.target).hasClass('swipable') || $(e.target).parents('.swipable').length > 0)
             jFlick.Back();
     });
-    next();
 });
+
+jFlick.__performance = 'no';
 
 router.global.popping(function (req, top, bottom, next, final) {
     bottom.css('display', 'inline');
@@ -156,6 +152,7 @@ router.global.loading(function (req, top, bottom, next, final) {
         if (top.find('.navigator').length == 0 && $('.navigator[data-parent="#' + top.attr('id') + '"]').length == 0 || bottom.find('.navigator').length == 0 && $('.navigator[data-parent="#' + bottom.attr('id') + '"]').length == 0) {
             bottom.css('transform', 'translateX(' + -$(window).width() / 4 + 'px)');
             top.css('transform', 'translateX(' + $(window).width() + 'px)');
+            next();
             top.appendTo('body');
             setTimeout(function () {
                 top.css('transform', 'none');
@@ -179,6 +176,7 @@ router.global.loading(function (req, top, bottom, next, final) {
             top.find('.navigator .right').css('opacity', 0);
 
             // 显示新视图
+            next();
             top.appendTo('body');
             top.find('.navigator').appendTo('#jflick-navigators');
             top.css('padding-top', $('.navigator[data-parent="#' + bottom.attr('id') + '"]').outerHeight());
@@ -220,6 +218,7 @@ router.global.loading(function (req, top, bottom, next, final) {
         top.css('padding-top', 0);
 
         // 显示新视图
+        next();
         top.appendTo('body');
         top.outerHeight($(window).height());
 
@@ -241,13 +240,13 @@ router.global.loading(function (req, top, bottom, next, final) {
         }, 300);
     } else {
         top.find('.navigator').attr('data-parent', '#' + top.attr('id'));
+        next();
         top.appendTo('body');
         top.outerHeight($(window).height());
         top.find('.navigator').appendTo('#jflick-navigators');
         bottom.hide();
         final();
     }
-    next();
 });
 
 router.global.loading(function (req, top, bottom, next) {
@@ -279,7 +278,7 @@ router.global.loading(function (req, top, bottom, next) {
         duplicate.scrollTop(top.scrollTop(), true);
         duplicate.outerHeight(header.outerHeight());
         bg.outerHeight(header.outerHeight() + parseFloat(bg.css('border-bottom-width').replace('px', '')));
-        $(top.outerHeight($(window).height()))
+        top.outerHeight($(window).height());
     }, 15);
 
     next();
