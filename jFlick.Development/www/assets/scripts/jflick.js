@@ -18,7 +18,16 @@ router.onpopping = {};
 router.onloading = {};
 router.onpopped = {};
 
-router.loaded = router.get = function (path, func) {
+router.get = function (path, func) {
+    if (!path || !func) return;
+    if (!router.onloaded[path])
+        router.onloaded[path] = [];
+    router.onloaded[path].push(function (req, top, bottom, next) {
+        func(req, top, next);
+    });
+};
+
+router.loaded = function (path, func) {
     if (!path || !func) return;
     if (!router.onloaded[path])
         router.onloaded[path] = [];
@@ -71,35 +80,37 @@ router.global.redirecting = function (func) {
     router.global.onredirecting.push(func);
 };
 
-jFlick.OnLoading = function (i, req, res) {
+jFlick.OnLoading = function (i, req, top, bottom, final) {
     if (!router.global.onloading[i])
-        return jFlick.__OnLoading(0, req, res);
+        return jFlick.__OnLoading(0, req, top, bottom);
     return function () {
-        router.global.onloading[i](req, res, jFlick.OnLoading(i + 1, req, res));
+        router.global.onloading[i](req, top, bottom, jFlick.OnLoading(i + 1, req, top, bottom, final), final);
     };
 };
 
-jFlick.__OnLoading = function (i, req, res) {
+jFlick.__OnLoading = function (i, req, top, bottom) {
+    var key = jFlick.GetPath(document.location.toString());
     if (!router.onloading[key] || !router.onloading[key][i])
         return function () { };
     return function () {
-        router.onloading[key][i](req, res, jFlick.__OnLoading(key, i + 1, req, res));
+        router.onloading[key][i](req, top, bottom, jFlick.__OnLoading(key, i + 1, req, top, bottom));
     };
 };
 
-jFlick.OnLoaded = function (key, i, req, res) {
+jFlick.OnLoaded = function (i, req, top, bottom) {
     if (!router.global.onloaded[i])
-        return jFlick.__OnLoaded(0, req, res);
+        return jFlick.__OnLoaded(0, req, top, bottom);
     return function () {
-        router.onloaded[key][i](req, res, jFlick.OnLoaded(key, i + 1, req, res));
+        router.global.onloaded[i](req, top, bottom, jFlick.OnPopping(i + 1, req, top, bottom));
     };
 };
 
-jFlick.__OnLoaded = function (i, req, res) {
+jFlick.__OnLoaded = function (i, req, top, bottom) {
+    var key = jFlick.GetPath(document.location.toString());
     if (!router.onloaded[key] || !router.onloaded[key][i])
         return function () { };
     return function () {
-        router.onloaded[key][i](req, res, jFlick.__OnLoaded(key, i + 1, req, res));
+        router.onloaded[key][i](req, top, bottom, jFlick.__OnLoaded(key, i + 1, req, top, bottom));
     };
 };
 
@@ -107,31 +118,33 @@ jFlick.OnPopping = function (i, req, top, bottom, final) {
     if (!router.global.onpopping[i])
         return jFlick.__OnPopping(0, req, top, bottom);
     return function () {
-        router.global.onpopping[i](req, top, bottom, jFlick.OnPopping(i + 1, req, res), final);
+        router.global.onpopping[i](req, top, bottom, jFlick.OnPopping(i + 1, req, top, bottom, final), final);
     };
 };
 
 jFlick.__OnPopping = function (i, req, top, bottom) {
+    var key = jFlick.GetPath(document.location.toString());
     if (!router.onpopping[key] || !router.onpopping[key][i])
         return function () { };
     return function () {
-        router.onpopping[key][i](req, top, bottom, jFlick.__OnPopping(key, i + 1, req, res));
+        router.onpopping[key][i](req, top, bottom, jFlick.__OnPopping(key, i + 1, req, top, bottom));
     };
 };
 
-jFlick.OnPopped = function (key, i, req, res) {
+jFlick.OnPopped = function (i, req, top, bottom) {
     if (!router.global.onpopped[i])
-        return jFlick.__OnPopped(0, req, res);
+        return jFlick.__OnPopped(0, req, top, bottom);
     return function () {
-        router.onloaded[key][i](req, res, jFlick.OnPopped(key, i + 1, req, res));
+        router.global.onpopped[i](req, top, bottom, jFlick.OnPopping(i + 1, req, top, bottom));
     };
 };
 
-jFlick.__OnPopped = function (i, req, res) {
+jFlick.__OnPopped = function (i, req, top, bottom) {
+    var key = jFlick.GetPath(document.location.toString());
     if (!router.onpopped[key] || !router.onpopped[key][i])
         return function () { };
     return function () {
-        router.onpopped[key][i](req, res, jFlick.__OnPopped(key, i + 1, req, res));
+        router.onpopped[key][i](req, top, bottom, jFlick.__OnPopped(key, i + 1, req, top, bottom));
     };
 };
 
@@ -210,47 +223,11 @@ jFlick.PopView = function () {
     if ($('.container').length <= 1) return false;
     var current = $($('.container')[$('.container').length - 1]);
     var covered = $($('.container')[$('.container').length - 2]);
-    var popping = jFlick.OnPopping(0, jFlick.AnalyzingParams(), covered);
+    var popping = jFlick.OnPopping(0, jFlick.AnalyzingParams(), current, covered, jFlick.OnPopped(0, jFlick.AnalyzingParams(), current, covered));
     if (popping)
         popping();
     return true;
 }
-
-router.middlewares.push(function (req, res, next) {
-    // 注册Switchery
-    jFlick.RegisterSwitchery(res);
-    next();
-});
-
-router.middlewares.push(function (req, res, next) {
-    // 注册标题栏毛玻璃特效
-    var bg = $('<div class="container-blurred-bg"></div>');
-    var header = res.find('.navigator');
-    res.find('.navigator').append(bg);
-    var duplicate = res.clone();
-    duplicate.find('*').removeAttr('id');
-    duplicate.find('.navigator').remove();
-    duplicate.removeAttr('id');
-    duplicate.removeAttr('data-url');
-    duplicate.css('position', 'fixed');
-    duplicate.addClass('container-blurred');
-    duplicate.removeClass('container');
-    header.append(duplicate);
-    res.find('.navigator').append(bg);
-
-    var translation;
-    if (jFlick.__currentBlurTimer)
-        clearInterval(jFlick.__currentBlurTimer);
-
-    jFlick.__currentBlurTimer = setInterval(function () {
-        duplicate.scrollTop(res.scrollTop(), true);
-        duplicate.outerHeight(header.outerHeight());
-        bg.outerHeight(header.outerHeight() + parseFloat(bg.css('border-bottom-width').replace('px', '')));
-        $(res.outerHeight($(window).height()))
-    }, 15);
-
-    next();
-});
 
 /* Redirect to */
 jFlick.RedirectTo = function (url, performance) {
@@ -267,121 +244,15 @@ jFlick.RedirectTo = function (url, performance) {
         jFlick.__performance = history.state.performance;
         var tmp = $(frm).contents().find('.container')[0];
         var container = $(tmp);
+        frm.parentNode.removeChild(frm);
         container.attr('id', jFlick.GenerateRandomString());
         var covered = $($('.container')[$('.container').length - 1]);
         container.attr('data-url', url);
 
-
-        container.outerHeight($(window).height());
-
         // 运行中间件
-        var mid = jFlick.BuildMiddlewaresChain(0, jFlick.AnalyzingParams(), container);
-        if (mid)
-            mid();
-        if (performance == 'slide') {
-            if (container.find('.navigator').length == 0 && $('.navigator[data-parent="#' + container.attr('id') + '"]').length == 0 || covered.find('.navigator').length == 0 && $('.navigator[data-parent="#' + covered.attr('id') + '"]').length == 0) {
-                covered.css('transform', 'translateX(' + -$(window).width() / 4 + 'px)');
-                container.css('transform', 'translateX(' + $(window).width()+ 'px)');
-                container.appendTo('body');
-                setTimeout(function () {
-                    container.css('transform', 'none');
-                }, 50);
-            } else {
-                container.addClass('swipable');
-
-                // 添加container顶部空隙
-                covered.css('padding-top', $('.navigator[data-parent="#' + covered.attr('id') + '"]').outerHeight());
-                covered.outerHeight($(window).height());
-
-                covered.css('transform', 'translateX(' + -$(window).width() / 4 + 'px)');
-
-                // 新视图预位
-                container.find('.navigator').attr('data-parent', '#' + container.attr('id'));
-                container.css('transform', 'translateX(' + $(window).width() + 'px)');
-                container.find('.navigator').addClass('alpha');
-                container.find('.navigator .title').css('transform', 'translateX(' + $(window).width() / 4 + 'px)');
-                container.find('.navigator .title').css('opacity', 0);
-                container.find('.navigator .left').css('transform', 'translateX(' + $(window).width() / 4 + 'px)');
-                container.find('.navigator .left').css('opacity', 0);
-                container.find('.navigator .right').css('transform', 'translateX(' + $(window).width() / 4 + 'px)');
-                container.find('.navigator .right').css('opacity', 0);
-           
-                // 显示新视图
-                container.appendTo('body');
-                container.find('.navigator').appendTo('#jflick-navigators');
-                container.css('padding-top', $('.navigator[data-parent="#' + covered.attr('id') + '"]').outerHeight());
-                container.outerHeight($(window).height());
-
-                $('.navigator[data-parent="#' + covered.attr('id') + '"]').addClass('alpha');
-                $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.title').css('transform', 'translateX(' + -$(window).width() + 'px)');
-                $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.title').css('opacity', 0);
-                $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.left').css('transform', 'translateX(' + -$(window).width() + 'px)');
-                $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.left').css('opacity', 0);
-                $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.right').css('transform', 'translateX(' + -$(window).width() + 'px)');
-                $('.navigator[data-parent="#' + covered.attr('id') + '"]').find('.right').css('opacity', 0);
-                
-                $('.navigator[data-parent="#' + container.attr('id') + '"]').removeClass('alpha');
-                $('.navigator[data-parent="#' + container.attr('id') + '"]').find('.title').css('transform', 'none');
-                $('.navigator[data-parent="#' + container.attr('id') + '"]').find('.title').css('opacity', 1);
-                $('.navigator[data-parent="#' + container.attr('id') + '"]').find('.left').css('transform', 'none');
-                $('.navigator[data-parent="#' + container.attr('id') + '"]').find('.left').css('opacity', 1);
-                $('.navigator[data-parent="#' + container.attr('id') + '"]').find('.right').css('transform', 'none');
-                $('.navigator[data-parent="#' + container.attr('id') + '"]').find('.right').css('opacity', 1);
-
-                setTimeout(function () {
-                    container.css('transform', 'none');
-                    container.find('.navigator').appendTo('#jflick-navigators');
-                }, 50);
-            }
-        } else if (performance == 'bump') {
-            // 新视图预位
-            container.css('z-index', 501);
-            container.css('transform', 'translateY(' + $(window).height() + 'px)');
-            container.find('.navigator').css('position', 'static');
-            container.css('padding-top', 0);
-            container.outerHeight($(window).height());
-
-            // 显示新视图
-            container.appendTo('body');
-
-            // 调整新视图位置
-            setTimeout(function () {
-                container.css('transform', 'translateY(0)');
-            }, 50);
-
-            setTimeout(function () {
-                // 移动Navigators
-                container.find('.navigator').css('position', 'fixed');
-                container.css('z-index', 'auto');
-                container.find('.navigator').attr('data-parent', '#' + container.attr('id'));
-                container.find('.navigator').appendTo('#jflick-navigators');
-
-                // 调整新视图位置
-                container.css('padding-top', $('.navigator[data-parent="#' + container.attr('id') + '"]').find('.navigator').outerHeight());
-                container.outerHeight($(window).height());
-            }, 300);
-        } else {
-            container.find('.navigator').attr('data-parent', '#' + container.attr('id'));
-            container.outerHeight($(window).height());
-            container.appendTo('body');
-            container.find('.navigator').appendTo('#jflick-navigators');
-            covered.hide();
-            var func = jFlick.BuildCallChain(jFlick.GetPath(document.location.toString()), 0, jFlick.AnalyzingParams(), container);
-            func();
-        }
-
-        if (performance == 'bump' || performance == 'slide')
-            setTimeout(function () {
-                covered.hide();
-                container.css('padding-top', $('.navigator[data-parent="#' + container.attr('id') + '"]').outerHeight());
-                container.outerHeight($(window).height());
-                var func = jFlick.BuildCallChain(jFlick.GetPath(document.location.toString()), 0, jFlick.AnalyzingParams(), container);
-                if (func)
-                    func();
-            }, 300);
-        else
-            container.outerHeight($(window).height());
-        frm.parentNode.removeChild(frm);
+        var loading = jFlick.OnLoading(0, jFlick.AnalyzingParams(), container, covered, jFlick.OnLoaded(0, jFlick.AnalyzingParams(), container, covered));
+        if (loading)
+            loading();
     };
     document.body.appendChild(frm);
 }
@@ -393,69 +264,6 @@ jFlick.GetPath = function (url) {
 };
 
 $(document).ready(function () {
-    $(document).bind('touchstart', function (e) {
-        var tr;
-        if ($(e.target).is('tr') && $(e.target).attr('href')) {
-            tr = $(e.target);
-            tr.addClass('hover');
-        }
-        else if ($(e.target).parents('tr').attr('href')) {
-            tr = $(e.target).parents('tr');
-            tr.addClass('hover');
-        }
-        if (tr) {
-            var prev = tr.prev();
-            if (prev)
-                prev.addClass('fix-prev-tr-hover');
-            jFlick.__currentTr = { href: tr.attr('href'), performance: tr.attr('data-performance') };
-            var fix = $('<div class="fix-tr-hover"></div>')
-            fix.css('top', tr.offset().top);
-            fix.height(tr.outerHeight() - parseFloat(tr.css('border-bottom-width').replace('px', '')));
-            fix.appendTo(tr.parents('.container'));
-        }
-    });
-    $(document).bind('touchmove', function (e) {
-        var tr;
-        if ($(e.target).is('tr') && $(e.target).attr('href')) {
-            tr = $(e.target);
-        }
-        else if ($(e.target).parents('tr').attr('href')) {
-            tr = $(e.target).parents('tr');
-        }
-        var tr2;
-        if ($(e.targetTouches).is('tr') && $(e.targetTouches).attr('href')) {
-            tr2 = $(e.targetTouches);
-        }
-        else if ($(e.targetTouches).parents('tr').attr('href')) {
-            tr2 = $(e.targetTouches).parents('tr');
-        }
-        if (!tr || !tr2 || tr.attr('href') != tr2.attr('href')) {
-            $('.fix-prev-tr-hover').removeClass('.fix-prev-tr-hover');
-            $('.fix-tr-hover').remove();
-            $('.hover').removeClass('hover');
-            jFlick.__currentTr = null;
-        }
-    });
-    $(document).bind('touchend', function (e) {
-        if (!jFlick.__currentTr)
-            return;
-        var tr;
-        if ($(e.targetTouches).is('tr') && $(e.targetTouches).attr('href')) {
-            tr = $(e.targetTouches);
-        }
-        else if ($(e.targetTouches).parents('tr').attr('href')) {
-            tr = $(e.targetTouches).parents('tr');
-        }
-        $('.fix-prev-tr-hover').removeClass('.fix-prev-tr-hover');
-        $('.fix-tr-hover').remove();
-        $('.hover').removeClass('hover');
-        if (jFlick.__currentTr && jFlick.__currentTr.href) {
-            var href = jFlick.__currentTr.href;
-            var performance = jFlick.__currentTr.performance;
-            jFlick.__currentTr = null;
-            jFlick.RedirectTo(href, performance);
-        }
-    });
     $(document).unbind('click').on('click', function (e) {
         if ($(e.target).is('a') && $(e.target).attr('href').toString().indexOf('javascript') >= 0)
             return true;
@@ -472,15 +280,6 @@ $(document).ready(function () {
             return false;
         }
     };
-});
-
-$(window).resize(function () {
-    var containers = $('.container');
-    for (var i = 0; i < containers.length; i++)
-    {
-        var container = $(containers[i]);
-        container.outerHeight($(window).height());
-    }
 });
 
 jFlick.RegisterSwitchery = function (container) {
