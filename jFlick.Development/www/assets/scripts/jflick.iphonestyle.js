@@ -140,11 +140,11 @@ router.global.popping(function (req, top, bottom, next, final) {
 
 router.global.popped(function (req, top, bottom, next) {
     $('.navigator[data-parent="#' + top.attr('id') + '"]').remove();
+    top.remove();
     if (jFlick.__topBlurTimer)
         clearInterval(jFlick.__topBlurTimer);
-    top.remove();
     jFlick.__topBlurTimer = setInterval(function () {
-        $('.navigator[data-parent="#' + bottom.attr('id') + '"] .top-blurred').scrollTop(bottom.scrollTop(), true);
+        $('.navigator[data-parent="#' + bottom.attr('id') + '"] .container-blurred').scrollTop(bottom.scrollTop(), true);
         bottom.outerHeight($(window).height());
     }, 15);
     next();
