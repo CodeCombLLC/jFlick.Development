@@ -117,8 +117,8 @@ router.global.popping(function (req, top, bottom, next, final) {
             $('.navigator[data-parent="#' + bottom.attr('id') + '"]').find('.right').css('opacity', 1);
         }
     } else if (jFlick.__performance == 'bump') {
-        $('.navigator[data-parent="#' + top.attr('id') + '"]').find('.top-blurred').remove();
-        $('.navigator[data-parent="#' + top.attr('id') + '"]').find('.top-blurred-bg').remove();
+        $('.navigator[data-parent="#' + top.attr('id') + '"]').find('.container-blurred').remove();
+        $('.navigator[data-parent="#' + top.attr('id') + '"]').find('.container-blurred-bg').remove();
         top.find('.navigator').css('position', 'static');
         $('.navigator[data-parent="#' + top.attr('id') + '"]').appendTo($('.navigator[data-parent="#' + top.attr('id') + '"]').attr('data-parent'));
         top.css('padding-top', 0);
