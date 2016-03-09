@@ -19,7 +19,7 @@ $(document).ready(function () {
                 prev.addClass('fix-prev-tr-hover');
             jFlick.__currentTr = { href: tr.attr('href'), performance: tr.attr('data-performance') };
             var fix = $('<div class="fix-tr-hover"></div>')
-            fix.css('top', tr.offset().top);
+            fix.css('top', tr.offset().top + tr.parents('.container').scrollTop());
             fix.height(tr.outerHeight() - parseFloat(tr.css('border-bottom-width').replace('px', '')));
             fix.appendTo(tr.parents('.container'));
         }
