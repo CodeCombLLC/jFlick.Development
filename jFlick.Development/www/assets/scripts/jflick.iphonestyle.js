@@ -4,9 +4,46 @@
 // jFlick
 jFlick.__performance = 'no';
 jFlick.__currentBlurTimer = null;
+jFlick.__touched = false;
+jFlick.__elasticTimer = null;
+jFlick.__elasticLock = false;
+jFlick.__elasticTop = '.scroll-view';
 
 $(document).ready(function () {
+    var elastic = function (current) {
+        if (current.find('.scroll-view').length > 0) {
+            var scrollTop = current.find(jFlick.__elasticTop).offset().top + current.scrollTop();
+            if ($('.navigator[data-parent="#' + current.attr('id') + '"]').length > 0)
+                scrollTop -= $('.navigator[data-parent="#' + current.attr('id') + '"]').outerHeight();
+
+            if (current.scrollTop() < scrollTop && !jFlick.__elasticLock) {
+                jFlick.__elasticLock = true;
+                current.animate({ scrollTop: scrollTop }, 250);
+                setTimeout(function () { jFlick.__elasticLock = false; }, 250);
+            }
+
+            if ($(window).height() - current.find('.elastic-bottom').offset().top > 0 && !jFlick.__elasticLock) {
+                jFlick.__elasticLock = true;
+                current.animate({ scrollTop: current.scrollTop() - $(window).height() + current.find('.elastic-bottom').offset().top }, 250);
+                setTimeout(function () { jFlick.__elasticLock = false; }, 250);
+            }
+        }
+    };
+    var elastic_touch = function (e) {
+        if ($(e.target).attr('href'))
+            return;
+        var current = $(e.target).hasClass('.container') ? $(e.target) : $(e.target).parents('.container');
+        elastic(current);
+    }
+    jFlick.__elasticTimer = setInterval(function () {
+        if (!jFlick.__touched)
+        {
+            var current = jFlick.GetView(0);
+            elastic(current);
+        }
+    }, 100);
     $(document).bind('touchstart', function (e) {
+        jFlick.__touched = true;
         var tr;
         if ($(e.target).is('tr') && $(e.target).attr('href')) {
             tr = $(e.target);
@@ -50,6 +87,7 @@ $(document).ready(function () {
         }
     });
     $(document).bind('touchend', function (e) {
+        jFlick.__touched = false;
         if (!jFlick.__currentTr)
             return;
         var tr;
@@ -69,6 +107,8 @@ $(document).ready(function () {
             jFlick.RedirectTo(href, performance);
         }
     });
+    $(document).bind('touchend', elastic_touch);
+    $(document).bind('touchcancel', elastic_touch);
     $(window).resize(function () {
         var containers = $('.container');
         for (var i = 0; i < containers.length; i++) {
@@ -259,6 +299,14 @@ router.global.loading(function (req, top, bottom, next) {
     next();
 });
 
+router.use(function (req, res, next) {
+    if (res.find('.scroll-view').length > 0) {
+        res.prepend('<div class="elastic-top"></div>');
+        res.append('<div class="elastic-bottom"></div>');
+    }
+    next();
+});
+
 router.global.loading(function (req, top, bottom, next) {
     // 注册标题栏毛玻璃特效
     var bg = $('<div class="container-blurred-bg"></div>');
@@ -288,3 +336,10 @@ router.global.loading(function (req, top, bottom, next) {
 
     next();
 });
+
+jFlick.Elastic = function (selector) {
+    if (!selector)
+        jFlick.__elasticTop = '.scroll-view';
+    else
+        jFlick.__elasticTop = selector;
+};

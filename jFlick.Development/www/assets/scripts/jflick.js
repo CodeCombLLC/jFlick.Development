@@ -17,6 +17,13 @@ router.onpopping = {};
 router.onloading = {};
 router.onpopped = {};
 
+router.use = function (func) {
+    if (!func) return;
+    router.global.loading(function (req, top, bottom, next) {
+        func(req, top, next);
+    });
+};
+
 router.get = function (path, func) {
     if (!path || !func) return;
     if (!router.onloaded[path])
@@ -54,22 +61,22 @@ router.popped = function (path, func) {
     router.onpopped[path].push(func);
 };
 
-router.global.loading = router.use = function (func) {
+router.global.loading = function (func) {
     if (!func) return;
     router.global.onloading.push(func);
 };
 
-router.global.loaded = router.use = function (func) {
+router.global.loaded = function (func) {
     if (!func) return;
     router.global.onloaded.push(func);
 };
 
-router.global.popping = router.use = function (func) {
+router.global.popping = function (func) {
     if (!func) return;
     router.global.onpopping.push(func);
 };
 
-router.global.popped = router.use = function (func) {
+router.global.popped = function (func) {
     if (!func) return;
     router.global.onpopped.push(func);
 };
@@ -298,3 +305,8 @@ jFlick.GenerateRandomString = function (len) {
     }
     return pwd;
 };
+
+jFlick.GetView = function (index) {
+    if (!index) index = 0;
+    return $($('.container')[$('.container').length - index - 1]);
+}

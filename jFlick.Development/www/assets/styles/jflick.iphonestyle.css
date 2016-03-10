@@ -344,3 +344,7 @@ tr.hover td {
   height: 40px;
   width: 40px;
 }
+
+.elastic-top, .elastic-bottom {
+    height: 2000px;
+}
