@@ -22,7 +22,7 @@ $(document).ready(function () {
                 setTimeout(function () { jFlick.__elasticLock = false; }, 250);
             }
 
-            if ($(window).height() - current.find('.elastic-bottom').offset().top > 0 && !jFlick.__elasticLock) {
+            if ($(window).height() - current.find('.elastic-bottom').offset().top > 0 && current.scrollTop() > $(window).height() && !jFlick.__elasticLock) {
                 jFlick.__elasticLock = true;
                 current.animate({ scrollTop: current.scrollTop() - $(window).height() + current.find('.elastic-bottom').offset().top }, 250);
                 setTimeout(function () { jFlick.__elasticLock = false; }, 250);

@@ -30,7 +30,7 @@ body {
 	padding-top: 20px;
 	height: 2.8em;
     position: fixed;
-	background-color: rgba(245,245,247,0.45);
+	background-color: rgba(245,245,247,0.6);
 	width: 100%;
 	z-index: 500;
 	transition: opacity 0.25s ease, transform 0.25s ease;
@@ -347,4 +347,40 @@ tr.hover td {
 
 .elastic-top, .elastic-bottom {
     height: 2000px;
+}
+
+.tab-bar {
+    text-align: center;
+    margin: 0.25em 0;
+    line-height: 0.9em;
+    height: 2.8em;
+    position: fixed;
+    bottom: 0;
+    background-color: rgba(255,255,255,0.95);
+    border-top: 0.08em solid #ddd; 
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+    .tab-bar a {
+        color: #888;
+        text-decoration: none;
+    }
+
+.tab-icon {
+    font-size: 1.4em!important;
+}
+
+.tab-text {
+    font-size: 0.7em;
+}
+
+.tab-active {
+    color: rgb(23,126,251)!important;
+}
+
+.tab-block {
+    display: block;
 }
