@@ -191,6 +191,7 @@ router.global.popping(function (req, top, bottom, next, final) {
 
 router.global.popped(function (req, top, bottom, next) {
     $('.navigator[data-parent="#' + top.attr('id') + '"]').remove();
+    $('.navigator[data-parent="#' + top.attr('id') + '"]').remove();
     top.remove();
     if (jFlick.__topBlurTimer)
         clearInterval(jFlick.__topBlurTimer);
@@ -299,7 +300,19 @@ router.global.loading(function (req, top, bottom, next, final) {
             top.outerHeight($(window).height());
             final();
         }, 300);
-    } else {
+    } else if (performance == 'tab') {
+        top.find('.navigator').attr('data-parent', '#' + top.attr('id'));
+        next();
+        top.appendTo('body');
+        top.outerHeight($(window).height());
+        top.find('.navigator').appendTo('#jflick-navigators');
+        $('.navigator[data-parent="#' + bottom.attr('id') + '"]').remove();
+        $('.tab-bar[data-parent="#' + bottom.attr('id') + '"]').remove();
+        if (bottom.hasClass('swipable'))
+            top.addClass('swipable');
+        bottom.remove();
+        final();
+    }  else {
         top.find('.navigator').attr('data-parent', '#' + top.attr('id'));
         next();
         top.appendTo('body');

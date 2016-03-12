@@ -269,10 +269,18 @@ jFlick.GetPath = function (url) {
 
 $(document).ready(function () {
     $(document).unbind('click').on('click', function (e) {
-        if ($(e.target).is('a') && $(e.target).attr('href').toString().indexOf('javascript') >= 0)
+        var a;
+        if ($(e.target).is('a'))
+            a = $(e.target);
+        else {
+            a = $(e.target).parents('a');
+        }
+        if (a.is('a') && a.attr('href').toString().indexOf('javascript') >= 0) {
             return true;
-        if ($(e.target).is('a') && $(e.target).attr('href')[0] != '#') {
-            jFlick.RedirectTo($(e.target).attr('href'), $(e.target).attr('data-performance'));
+        }
+        if (a.is('a') && a.attr('href')[0] != '#' && a.attr('href').toString().indexOf('//') < 0 && a.attr('href').toString().indexOf('http') < 0) {
+            jFlick.RedirectTo(a.attr('href'), a.attr('data-performance'));
+            e.preventDefault();
             return false;
         }
     });
