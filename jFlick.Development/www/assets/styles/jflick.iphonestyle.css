@@ -362,6 +362,8 @@ tr.hover td {
     table-layout: fixed;
     border-collapse: collapse;
     border-spacing: 0;
+    z-index: 500;
+	transition: transform 0.25s ease;
 }
 
     .tab-bar a {

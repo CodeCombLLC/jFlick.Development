@@ -10,6 +10,8 @@ jFlick.__elasticLock = false;
 jFlick.__elasticTop = '.scroll-view';
 
 $(document).ready(function () {
+    $('body').append('<div id="jflick-navigators"></div>');
+    $('body').append('<div id="jflick-tab-bars"></div>');
     var elastic = function (current) {
         if (current.find('.scroll-view').length > 0) {
             var scrollTop = current.find(jFlick.__elasticTop).offset().top + current.scrollTop();
@@ -129,6 +131,8 @@ $(document).ready(function () {
 
 router.global.popping(function (req, top, bottom, next, final) {
     bottom.css('display', 'inline');
+    var tabbar1 = $('.tab-bar[data-parent="#' + top.attr('id') + '"]');
+    var tabbar2 = $('.tab-bar[data-parent="#' + bottom.attr('id') + '"]');
     if (jFlick.__performance == 'slide') {
         if (top.find('.navigator').length == 0 && $('.navigator[data-parent="#' + top.attr('id') + '"]').length == 0 || bottom.find('.navigator').length == 0 && $('.navigator[data-parent="#' + bottom.attr('id') + '"]').length == 0) {
             top.css('transform', 'translateX(' + $(window).width() + 'px)');
@@ -142,7 +146,9 @@ router.global.popping(function (req, top, bottom, next, final) {
             $('.navigator[data-parent="#' + top.attr('id') + '"]').css('position', 'fixed');
 
             top.css('transform', 'translateX(' + $(window).width() + 'px)');
+            tabbar1.css('transform', 'translateX(' + $(window).width() + 'px)');
             bottom.css('transform', 'none');
+            tabbar2.css('transform', 'none');
 
             // 导航栏动画
             $('.navigator[data-parent="#' + top.attr('id') + '"]').addClass('alpha');
@@ -197,6 +203,8 @@ router.global.popped(function (req, top, bottom, next) {
 
 router.global.loading(function (req, top, bottom, next, final) {
     var performance = jFlick.__performance;
+    var tabbar = top.find('.tab-bar');
+    tabbar.attr('data-parent', '#' + top.attr('id'));
     if (performance == 'slide') {
         top.addClass('swipable');
         if (top.find('.navigator').length == 0 && $('.navigator[data-parent="#' + top.attr('id') + '"]').length == 0 || bottom.find('.navigator').length == 0 && $('.navigator[data-parent="#' + bottom.attr('id') + '"]').length == 0) {
@@ -224,9 +232,11 @@ router.global.loading(function (req, top, bottom, next, final) {
             top.find('.navigator .left').css('opacity', 0);
             top.find('.navigator .right').css('transform', 'translateX(' + $(window).width() / 4 + 'px)');
             top.find('.navigator .right').css('opacity', 0);
+            tabbar.css('transform', 'translateX(' + $(window).width() + 'px)');
 
             // 显示新视图
             next();
+            tabbar.appendTo('#jflick-tab-bars');
             top.appendTo('body');
             top.find('.navigator').appendTo('#jflick-navigators');
             top.css('padding-top', $('.navigator[data-parent="#' + bottom.attr('id') + '"]').outerHeight());
@@ -250,6 +260,7 @@ router.global.loading(function (req, top, bottom, next, final) {
 
             setTimeout(function () {
                 top.css('transform', 'none');
+                tabbar.css('transform', 'none');
                 top.find('.navigator').appendTo('#jflick-navigators');
             }, 50);
         }
@@ -274,7 +285,7 @@ router.global.loading(function (req, top, bottom, next, final) {
 
         // 调整新视图位置
         setTimeout(function () {
-            top.css('transform', 'translateY(0)');
+            top.css('transform', 'none');
         }, 50);
 
         setTimeout(function () {
@@ -307,10 +318,10 @@ router.global.loading(function (req, top, bottom, next) {
 router.use(function (req, res, next) {
     if (res.find('.scroll-view').length > 0) {
         var top = $('<div class="elastic-top"></div>');
-        top.height($(window).height());
+        top.height($(window).height() / 3 * 2);
         top.prependTo(res);
         var bottom = $('<div class="elastic-bottom"></div>');
-        bottom.height($(window).height());
+        bottom.height($(window).height() / 3 * 2);
         bottom.appendTo(res);
     }
     next();

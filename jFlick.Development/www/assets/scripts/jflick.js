@@ -185,8 +185,6 @@ jFlick.AnalyzingPostParams = function () {
 
 /* Startup */
 jFlick.Startup = function () {
-    $('body').append('<div id="jflick-navigators"></div>');
-
     var tmp = document.location.toString();
     jFlick.webRootPath = tmp.substr(0, tmp.indexOf('/index.html'));
 
