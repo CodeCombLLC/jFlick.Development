@@ -13,8 +13,10 @@ $(document).ready(function () {
     var elastic = function (current) {
         if (current.find('.scroll-view').length > 0) {
             var scrollTop = current.find(jFlick.__elasticTop).offset().top + current.scrollTop();
+            var navheight = 0;
             if ($('.navigator[data-parent="#' + current.attr('id') + '"]').length > 0)
-                scrollTop -= $('.navigator[data-parent="#' + current.attr('id') + '"]').outerHeight();
+                navheight = $('.navigator[data-parent="#' + current.attr('id') + '"]').outerHeight();
+            scrollTop -= navheight;
 
             if (current.scrollTop() < scrollTop && !jFlick.__elasticLock) {
                 jFlick.__elasticLock = true;
@@ -22,9 +24,12 @@ $(document).ready(function () {
                 setTimeout(function () { jFlick.__elasticLock = false; }, 250);
             }
 
-            if ($(window).height() - current.find('.elastic-bottom').offset().top > 0 && current.scrollTop() > $(window).height() && !jFlick.__elasticLock) {
+            if ($(window).height() - current.find('.elastic-bottom').offset().top > 0 && current.scrollTop() > current.find('.elastic-top').outerHeight() + navheight && !jFlick.__elasticLock) {
                 jFlick.__elasticLock = true;
-                current.animate({ scrollTop: current.scrollTop() - $(window).height() + current.find('.elastic-bottom').offset().top }, 250);
+                if (current.find('.scroll-view').outerHeight() < $(window).height())
+                    current.animate({ scrollTop: scrollTop }, 250);
+                else
+                    current.animate({ scrollTop: current.scrollTop() - $(window).height() + current.find('.elastic-bottom').offset().top }, 250);
                 setTimeout(function () { jFlick.__elasticLock = false; }, 250);
             }
         }
@@ -301,8 +306,12 @@ router.global.loading(function (req, top, bottom, next) {
 
 router.use(function (req, res, next) {
     if (res.find('.scroll-view').length > 0) {
-        res.prepend('<div class="elastic-top"></div>');
-        res.append('<div class="elastic-bottom"></div>');
+        var top = $('<div class="elastic-top"></div>');
+        top.height($(window).height());
+        top.prependTo(res);
+        var bottom = $('<div class="elastic-bottom"></div>');
+        bottom.height($(window).height());
+        bottom.appendTo(res);
     }
     next();
 });
