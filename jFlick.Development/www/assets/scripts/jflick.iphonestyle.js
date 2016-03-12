@@ -8,6 +8,7 @@ jFlick.__touched = false;
 jFlick.__elasticTimer = null;
 jFlick.__elasticLock = false;
 jFlick.__elasticTop = '.scroll-view';
+jFlick.__loading = false;
 
 $(document).ready(function () {
     $('body').append('<div id="jflick-navigators"></div>');
@@ -26,12 +27,14 @@ $(document).ready(function () {
                 setTimeout(function () { jFlick.__elasticLock = false; }, 250);
             }
 
-            if ($(window).height() - current.find('.elastic-bottom').offset().top > 0 && current.scrollTop() > current.find('.elastic-top').outerHeight() + navheight && !jFlick.__elasticLock) {
+            var tbheight = $('.tab-bar[data-parent="#' + current.attr('id') + '"]').outerHeight() || 0;
+
+            if ($(window).height() - current.find('.elastic-bottom').offset().top > tbheight && current.scrollTop() + tbheight > current.find('.elastic-top').outerHeight() + navheight && !jFlick.__elasticLock) {
                 jFlick.__elasticLock = true;
                 if (current.find('.scroll-view').outerHeight() < $(window).height())
                     current.animate({ scrollTop: scrollTop }, 250);
                 else
-                    current.animate({ scrollTop: current.scrollTop() - $(window).height() + current.find('.elastic-bottom').offset().top }, 250);
+                    current.animate({ scrollTop: current.scrollTop() - $(window).height() + current.find('.elastic-bottom').offset().top + tbheight }, 250);
                 setTimeout(function () { jFlick.__elasticLock = false; }, 250);
             }
         }
@@ -191,7 +194,7 @@ router.global.popping(function (req, top, bottom, next, final) {
 
 router.global.popped(function (req, top, bottom, next) {
     $('.navigator[data-parent="#' + top.attr('id') + '"]').remove();
-    $('.navigator[data-parent="#' + top.attr('id') + '"]').remove();
+    $('.tab-bar[data-parent="#' + top.attr('id') + '"]').remove();
     top.remove();
     if (jFlick.__topBlurTimer)
         clearInterval(jFlick.__topBlurTimer);
@@ -203,6 +206,7 @@ router.global.popped(function (req, top, bottom, next) {
 });
 
 router.global.loading(function (req, top, bottom, next, final) {
+    jFlick.__loading = true;
     var performance = jFlick.__performance;
     var tabbar = top.find('.tab-bar');
     tabbar.attr('data-parent', '#' + top.attr('id'));
@@ -212,6 +216,7 @@ router.global.loading(function (req, top, bottom, next, final) {
             bottom.css('transform', 'translateX(' + -$(window).width() / 4 + 'px)');
             top.css('transform', 'translateX(' + $(window).width() + 'px)');
             next();
+            tabbar.appendTo('#jflick-tab-bars');
             top.appendTo('body');
             setTimeout(function () {
                 top.css('transform', 'none');
@@ -281,6 +286,7 @@ router.global.loading(function (req, top, bottom, next, final) {
 
         // 显示新视图
         next();
+        tabbar.appendTo('#jflick-tab-bars');
         top.appendTo('body');
         top.outerHeight($(window).height());
 
@@ -303,6 +309,7 @@ router.global.loading(function (req, top, bottom, next, final) {
     } else if (performance == 'tab') {
         top.find('.navigator').attr('data-parent', '#' + top.attr('id'));
         next();
+        tabbar.appendTo('#jflick-tab-bars');
         top.appendTo('body');
         top.outerHeight($(window).height());
         top.find('.navigator').appendTo('#jflick-navigators');
@@ -315,6 +322,7 @@ router.global.loading(function (req, top, bottom, next, final) {
     }  else {
         top.find('.navigator').attr('data-parent', '#' + top.attr('id'));
         next();
+        tabbar.appendTo('#jflick-tab-bars');
         top.appendTo('body');
         top.outerHeight($(window).height());
         top.find('.navigator').appendTo('#jflick-navigators');
@@ -325,6 +333,17 @@ router.global.loading(function (req, top, bottom, next, final) {
 
 router.global.loading(function (req, top, bottom, next) {
     jFlick.RegisterSwitchery(top);
+    next();
+});
+
+router.global.loaded(function (req, top, bottom, next) {
+    var st = 0;
+    if ($('.navigator[data-parent="#' + top.attr('id') + '"]').length > 0)
+        st -= $('.navigator[data-parent="#' + top.attr('id') + '"]').outerHeight;
+    if (top.find('.elastic-top').length > 0)
+        st += top.find('.elastic-top').outerHeight();
+    top.scrollTop(st);
+    jFlick.__loading = false;
     next();
 });
 
