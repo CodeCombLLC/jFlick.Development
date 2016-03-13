@@ -30,7 +30,7 @@ body {
 	padding-top: 20px;
 	height: 2.8em;
     position: fixed;
-	background-color: rgba(245,245,247,0.6);
+	background-color: rgba(245,245,247,0.8);
 	width: 100%;
 	z-index: 500;
 	transition: opacity 0.25s ease, transform 0.25s ease;

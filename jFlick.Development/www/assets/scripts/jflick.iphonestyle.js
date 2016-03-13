@@ -13,48 +13,48 @@ jFlick.__elasticLock = true;
 jFlick.__elasticTop = '.scroll-view';
 jFlick.__loading = false;
 
+jFlick.__elastic = function (current) {
+    if (jFlick.__elasticLock)
+        return;
+    if (current.find('.scroll-view').length > 0) {
+        var scrollTop = current.find(jFlick.__elasticTop).offset().top + current.scrollTop();
+        var navheight = 0;
+        if ($('.navigator[data-parent="#' + current.attr('id') + '"]').length > 0)
+            navheight = $('.navigator[data-parent="#' + current.attr('id') + '"]').outerHeight();
+        scrollTop -= navheight;
+
+        if (current.scrollTop() < scrollTop && !jFlick.__elasticLock) {
+            jFlick.__elasticLock = true;
+            current.animate({ scrollTop: scrollTop }, 250);
+            setTimeout(function () { jFlick.__elasticLock = false; }, 250);
+        }
+
+        var tbheight = $('.tab-bar[data-parent="#' + current.attr('id') + '"]').outerHeight() || 0;
+
+        if ($(window).height() - current.find('.elastic-bottom').offset().top > tbheight && current.scrollTop() + tbheight > current.find('.elastic-top').outerHeight() + navheight && !jFlick.__elasticLock) {
+            jFlick.__elasticLock = true;
+            if (current.find('.scroll-view').outerHeight() < $(window).height())
+                current.animate({ scrollTop: scrollTop }, 250);
+            else
+                current.animate({ scrollTop: current.scrollTop() - $(window).height() + current.find('.elastic-bottom').offset().top + tbheight }, 250);
+            setTimeout(function () { jFlick.__elasticLock = false; }, 250);
+        }
+    }
+};
+
 $(document).ready(function () {
     $('body').append('<div id="jflick-navigators"></div>');
     $('body').append('<div id="jflick-tab-bars"></div>');
-    var elastic = function (current) {
-        if (jFlick.__elasticLock)
-            return;
-        if (current.find('.scroll-view').length > 0) {
-            var scrollTop = current.find(jFlick.__elasticTop).offset().top + current.scrollTop();
-            var navheight = 0;
-            if ($('.navigator[data-parent="#' + current.attr('id') + '"]').length > 0)
-                navheight = $('.navigator[data-parent="#' + current.attr('id') + '"]').outerHeight();
-            scrollTop -= navheight;
-
-            if (current.scrollTop() < scrollTop && !jFlick.__elasticLock) {
-                jFlick.__elasticLock = true;
-                current.animate({ scrollTop: scrollTop }, 250);
-                setTimeout(function () { jFlick.__elasticLock = false; }, 250);
-            }
-
-            var tbheight = $('.tab-bar[data-parent="#' + current.attr('id') + '"]').outerHeight() || 0;
-
-            if ($(window).height() - current.find('.elastic-bottom').offset().top > tbheight && current.scrollTop() + tbheight > current.find('.elastic-top').outerHeight() + navheight && !jFlick.__elasticLock) {
-                jFlick.__elasticLock = true;
-                if (current.find('.scroll-view').outerHeight() < $(window).height())
-                    current.animate({ scrollTop: scrollTop }, 250);
-                else
-                    current.animate({ scrollTop: current.scrollTop() - $(window).height() + current.find('.elastic-bottom').offset().top + tbheight }, 250);
-                setTimeout(function () { jFlick.__elasticLock = false; }, 250);
-            }
-        }
-    };
     var elastic_touch = function (e) {
         if ($(e.target).attr('href'))
             return;
         var current = $(e.target).hasClass('.container') ? $(e.target) : $(e.target).parents('.container');
-        elastic(current);
+        jFlick.__elastic(current);
     }
     jFlick.__elasticTimer = setInterval(function () {
-        if (!jFlick.__touched)
+        if (!jFlick.__touched && !jFlick.__elasticLock)
         {
-            var current = jFlick.GetView(0);
-            elastic(current);
+            jFlick.__elastic(jFlick.GetView(0));
         }
     }, 100);
     $(document).bind('touchstart', function (e) {
@@ -138,6 +138,7 @@ $(document).ready(function () {
 });
 
 router.global.popping(function (req, top, bottom, next, final) {
+    $('.tab-bar[data-parent="#' + bottom.attr('id') + '"]').show();
     bottom.css('display', 'inline');
     var tabbar1 = $('.tab-bar[data-parent="#' + top.attr('id') + '"]');
     var tabbar2 = $('.tab-bar[data-parent="#' + bottom.attr('id') + '"]');
@@ -211,8 +212,9 @@ router.global.popped(function (req, top, bottom, next) {
 });
 
 router.global.loading(function (req, top, bottom, next, final) {
-    jFlick.__loading = true;
+    clearInterval(jFlick.__elasticTimer);
     jFlick.__elasticLock = true;
+    jFlick.__loading = true;
     var performance = jFlick.__performance;
     var tabbar = top.find('.tab-bar');
     tabbar.attr('data-parent', '#' + top.attr('id'));
@@ -344,13 +346,17 @@ router.global.loading(function (req, top, bottom, next) {
 
 router.global.loaded(function (req, top, bottom, next) {
     var st = 0;
-    if ($('.navigator[data-parent="#' + top.attr('id') + '"]').length > 0)
-        st -= $('.navigator[data-parent="#' + top.attr('id') + '"]').outerHeight();
+    $('.tab-bar[data-parent="#' + bottom.attr('id') + '"]').hide();
     if (top.find('.elastic-top').length > 0)
         st += top.find('.elastic-top').outerHeight();
     top.scrollTop(st);
     jFlick.__loading = false;
     jFlick.__elasticLock = false;
+    jFlick.__elasticTimer = setInterval(function () {
+        if (!jFlick.__touched && !jFlick.__elasticLock) {
+            jFlick.__elastic(jFlick.GetView(0));
+        }
+    }, 100);
     next();
 });
 
