@@ -372,6 +372,16 @@ router.use(function (req, res, next) {
     next();
 });
 
+router.use(function (req, res, next) {
+    var anchors = res.find('.tab-bar a');
+    for (var i = 0; i < anchors.length; i++) {
+        if (document.location.toString().indexOf(jFlick.ParseUrl($(anchors[i]).attr('href'))) == 0 && (!document.location.toString()[jFlick.ParseUrl($(anchors[i]).attr('href')).length]) || document.location.toString()[jFlick.ParseUrl($(anchors[i]).attr('href')).length] == '?') {
+            $(anchors[i]).addClass('tab-active');
+        }
+    }
+    next();
+});
+
 router.global.loading(function (req, top, bottom, next) {
     // 注册标题栏毛玻璃特效
     var bg = $('<div class="container-blurred-bg"></div>');
